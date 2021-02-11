@@ -24,31 +24,33 @@ public class TransferRepositoryInMemory implements TransferRepository {
     @Override
     public void createTransfer(Transfer transfer) throws NegativeBalanceException, InvalidAmountException {
 
-        Transfer currentTransfer = transferMap.computeIfAbsent(transfer.getAccountFromId(), k->transfer);
+        String uniqueTransferId = "Id-" + System.currentTimeMillis();
+        Transfer currentTransfer = transferMap.computeIfAbsent(uniqueTransferId, k->transfer);
         if (transfer.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidAmountException(
                     "Amount must be positive!");
         }
 
-        Account accountFrom = accountsRepository.getAccount(currentTransfer.getAccountFromId());
-        Account accountTo = accountsRepository.getAccount(currentTransfer.getAccountToId());
+        Account accountFrom = accountsRepository.getAccount(transfer.getAccountFromId());
+        Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
 
         if(accountFrom == null){
-            throw new NonexistentAccountException("The account with Id: "+currentTransfer.getAccountFromId()+" does not exist!!");
+            throw new NonexistentAccountException("The account with Id: "+transfer.getAccountFromId()+" does not exist!!");
         }
 
         if(accountTo==null){
-            throw new NonexistentAccountException("The account with Id: "+currentTransfer.getAccountToId()+" does not exist!!");
+            throw new NonexistentAccountException("The account with Id: "+transfer.getAccountToId()+" does not exist!!");
         }
 
-        BigDecimal balance = accountFrom.getBalance().subtract(transfer.getAmount());
-        if (balance.compareTo(BigDecimal.ZERO) < 0) {
+        BigDecimal balanceFrom = accountFrom.getBalance().subtract(transfer.getAmount());
+        if (balanceFrom.compareTo(BigDecimal.ZERO) < 0) {
             throw new NegativeBalanceException(
                     "Account id " + currentTransfer.getAccountFromId() + " must not end up with negative balance!");
         }
 
-        accountFrom.setBalance(balance);
-        accountTo.getBalance().add(transfer.getAmount());
+        accountFrom.setBalance(balanceFrom);
+        BigDecimal balanceTo = accountTo.getBalance().add(transfer.getAmount());
+        accountTo.setBalance(balanceTo);
     }
 
     @Override
