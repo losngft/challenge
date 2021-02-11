@@ -25,14 +25,12 @@ import static org.junit.Assert.fail;
 @SpringBootTest
 public class TransfersServiceTest {
 
-    @InjectMocks
+    @Autowired
     private TransferService transferService;
 
     @Autowired
     private AccountsService accountsService;
 
-    @Mock
-    private NotificationService notificationService;
 
 
     @Before

@@ -33,7 +33,7 @@ public class TransfersControllerTest {
 
     private MockMvc mockMvc;
 
-    @InjectMocks
+    @Autowired
     private TransferService transferService;
 
     @Autowired
@@ -42,8 +42,6 @@ public class TransfersControllerTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    @Mock
-    private NotificationService notificationService;
 
     @Before
     public void prepareMockMvc() {

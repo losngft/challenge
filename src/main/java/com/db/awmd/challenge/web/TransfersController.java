@@ -3,6 +3,7 @@ package com.db.awmd.challenge.web;
 import com.db.awmd.challenge.domain.Transfer;
 import com.db.awmd.challenge.exception.InvalidAmountException;
 import com.db.awmd.challenge.exception.NegativeBalanceException;
+import com.db.awmd.challenge.exception.NonexistentAccountException;
 import com.db.awmd.challenge.service.TransferService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ public class TransfersController {
         } catch (
                 InvalidAmountException invalidAmountException) {
             return new ResponseEntity<>(invalidAmountException.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (
+                NonexistentAccountException nonexistentAccountException) {
+            return new ResponseEntity<>(nonexistentAccountException.getMessage(), HttpStatus.BAD_REQUEST);
         }
 
         return new ResponseEntity<>(HttpStatus.CREATED);
