@@ -8,4 +8,9 @@ Some basic steps to do before going to production
 2) Generate the api.yaml
 3) Implement the NotificationService interface otherwise it will not gonna work
 4) Keep just the necessary files in the project
-5) Generate the artifact(release)
+5) Continuous integration, BDD tests
+6) Communicating with the business(all areas affected)
+7) Deployment plan (cut over plan)
+8) Rollback plan
+9) Deployment exercise
+10) Generate the artifact(release)

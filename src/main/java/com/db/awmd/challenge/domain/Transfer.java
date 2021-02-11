@@ -4,8 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.validator.constraints.NotEmpty;
 
-import javax.validation.constraints.Digits;
-import javax.validation.constraints.Min;
+import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
@@ -20,7 +19,7 @@ public class Transfer {
     private final String accountToId;
 
     @NotNull
-    @Min(value = 0, message = "Initial balance must be positive.")
+    @DecimalMin(value = "0.0", inclusive = false, message = "The amount must be positive!")
     private BigDecimal amount;
 
     @JsonCreator

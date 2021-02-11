@@ -5,18 +5,16 @@ import com.db.awmd.challenge.domain.Transfer;
 import com.db.awmd.challenge.exception.InvalidAmountException;
 import com.db.awmd.challenge.exception.NegativeBalanceException;
 import com.db.awmd.challenge.service.AccountsService;
-import com.db.awmd.challenge.service.NotificationService;
 import com.db.awmd.challenge.service.TransferService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
+import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -30,7 +28,6 @@ public class TransfersServiceTest {
 
     @Autowired
     private AccountsService accountsService;
-
 
 
     @Before
@@ -48,7 +45,6 @@ public class TransfersServiceTest {
         accountId125.setBalance(new BigDecimal(0));
         this.accountsService.createAccount(accountId125);
 
-        transferService.getTransferRepository().clearTransfers();
     }
 
     @Test
@@ -57,7 +53,35 @@ public class TransfersServiceTest {
         Transfer transfer = new Transfer("Id-123", "Id-124", new BigDecimal(1000));
         this.transferService.createTransfer(transfer);
 
-        assertThat(this.transferService.getTransfer("Id-123")).isEqualTo(transfer);
+        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isEqualTo(new BigDecimal(0));
+        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isEqualTo(new BigDecimal(1000));
+    }
+
+    @Test
+    public void createTransferDeadlock() throws Exception {
+        Transfer transferA = new Transfer("Id-123", "Id-124", new BigDecimal(20));
+        Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
+
+
+        CountDownLatch latch = new CountDownLatch(1);
+        for (int i = 0; i < 5; ++i) {
+            Runnable runnableTask = () -> {
+                try {
+                    this.transferService.createTransfer(transferA);
+                    this.transferService.createTransfer(transferB);
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            };
+            new Thread(runnableTask, "Test Thread " + i).start();
+        }
+        // all threads are now waiting on the latch.
+        latch.countDown(); // release the latch
+        // all threads are now running the test method at the same time.
+        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThan(new BigDecimal(0));
+        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThan(new BigDecimal(1000));
+
     }
 
     @Test
@@ -69,7 +93,7 @@ public class TransfersServiceTest {
             this.transferService.createTransfer(transfer);
             fail("Should have failed when passing negative amount");
         } catch (InvalidAmountException ex) {
-            assertThat(ex.getMessage()).isEqualTo("Amount must be positive!");
+            assertThat(ex.getMessage()).isEqualTo("The amount must be positive!!");
         }
 
     }
