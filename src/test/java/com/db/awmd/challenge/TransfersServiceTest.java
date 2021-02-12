@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
@@ -20,6 +21,8 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -144,4 +147,37 @@ public class TransfersServiceTest {
         }
 
     }
+
+
+    @Test
+    public void testDeadlockHandlingMultithread() throws Exception {
+        String accountId1 = "Id-1235";
+        Account account1 = new Account(accountId1, new BigDecimal("100"));
+        this.accountsService.createAccount(account1);
+        String accountId2 = "Id-1234";
+        Account account2 = new Account(accountId2, new BigDecimal("20"));
+        this.accountsService.createAccount(account2);
+        int numberOfThreads = 2;
+        ExecutorService service = Executors.newFixedThreadPool(100);
+        CountDownLatch latch = new CountDownLatch(numberOfThreads);
+        Transfer transferA = new Transfer("Id-1235", "Id-1234", new BigDecimal(30));
+        Transfer transferB = new Transfer("Id-1234", "Id-1235", new BigDecimal(10));
+        service.submit(() -> {
+                this.transferService.createTransfer(transferA);
+            latch.countDown();
+        });
+        service.submit(() -> {
+            this.transferService.createTransfer(transferB);
+            latch.countDown();
+        });
+        latch.await();
+
+        Account accountFrom = accountsService.getAccount("Id-1235");
+        Account accountTo = accountsService.getAccount("Id-1234");
+        assertThat(accountFrom.getBalance()).isEqualByComparingTo("80");
+        assertThat(accountTo.getBalance()).isEqualByComparingTo("40");
+
+    }
+
+
 }
