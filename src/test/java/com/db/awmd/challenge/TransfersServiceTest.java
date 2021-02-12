@@ -108,16 +108,13 @@ public class TransfersServiceTest {
         for (int i = 0; i < numberOfThreads; i++) {
             service.submit(() -> {
                 this.transferService.createTransfer(transferA);
-                latch.countDown();
-            });
-
-            service.submit(() -> {
                 this.transferService.createTransfer(transferB);
                 latch.countDown();
             });
         }
         latch.await();
-        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThan(new BigDecimal(0));
+        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThanOrEqualTo(new BigDecimal(0));
+        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThanOrEqualTo(new BigDecimal(1000));
     }
 
     @Test
