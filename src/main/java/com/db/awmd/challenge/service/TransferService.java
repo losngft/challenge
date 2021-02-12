@@ -27,33 +27,33 @@ public class TransferService {
         this.accountsService = accountsService;
     }
 
-    public synchronized void createTransfer(Transfer transfer) {
+    public void createTransfer(Transfer transfer) {
 
         if (transfer.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidAmountException("The amount must be positive!!");
         }
+        synchronized (transfer.getAccountFromId()) {
+            Account accountFrom = accountsRepository.getAccount(transfer.getAccountFromId());
+            Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
 
-        Account accountFrom = accountsRepository.getAccount(transfer.getAccountFromId());
-        Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
+            if (accountFrom == null) {
+                throw new NonexistentAccountException("The account with Id: " + transfer.getAccountFromId() + " does not exist!!");
+            }
 
-        if (accountFrom == null) {
-            throw new NonexistentAccountException("The account with Id: " + transfer.getAccountFromId() + " does not exist!!");
+            if (accountTo == null) {
+                throw new NonexistentAccountException("The account with Id: " + transfer.getAccountToId() + " does not exist!!");
+            }
+
+            BigDecimal balanceFrom = accountFrom.getBalance().subtract(transfer.getAmount());
+            if (balanceFrom.compareTo(BigDecimal.ZERO) < 0) {
+                throw new NegativeBalanceException(
+                        "Account id " + transfer.getAccountFromId() + " must not end up with negative balance!");
+            }
+
+            accountFrom.setBalance(balanceFrom);
+            BigDecimal balanceTo = accountTo.getBalance().add(transfer.getAmount());
+            accountTo.setBalance(balanceTo);
         }
-
-        if (accountTo == null) {
-            throw new NonexistentAccountException("The account with Id: " + transfer.getAccountToId() + " does not exist!!");
-        }
-
-        BigDecimal balanceFrom = accountFrom.getBalance().subtract(transfer.getAmount());
-        if (balanceFrom.compareTo(BigDecimal.ZERO) < 0) {
-            throw new NegativeBalanceException(
-                    "Account id " + transfer.getAccountFromId() + " must not end up with negative balance!");
-        }
-
-        accountFrom.setBalance(balanceFrom);
-        BigDecimal balanceTo = accountTo.getBalance().add(transfer.getAmount());
-        accountTo.setBalance(balanceTo);
-
         this.notificationService.notifyAboutTransfer(accountsService.getAccount(transfer.getAccountFromId()), "The amount of: " + transfer.getAmount() + " from your account was transferred to: " + transfer.getAccountToId());
         this.notificationService.notifyAboutTransfer(accountsService.getAccount(transfer.getAccountToId()), "The amount of: " + transfer.getAmount() + " was transferred to your account from: " + transfer.getAccountFromId());
     }
