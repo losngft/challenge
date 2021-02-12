@@ -84,24 +84,31 @@ public class TransfersServiceTest {
         assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThanOrEqualTo(new BigDecimal(0));
         assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThanOrEqualTo(new BigDecimal(1000));
 
-//        int numberOfThreads = 2;
-//        ExecutorService service = Executors.newFixedThreadPool(10);
-//        CountDownLatch latch = new CountDownLatch(numberOfThreads);
-//        Transfer transferA = new Transfer("Id-123", "Id-124", new BigDecimal(20));
-//        Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
-//        for (int i = 0; i < numberOfThreads; i++) {
-//            service.submit(() -> {
-//                    this.transferService.createTransfer(transferA);
-//                    this.transferService.createTransfer(transferB);
-//                latch.countDown();
-//            });
-//        }
-//        latch.await();
-//        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThan(new BigDecimal(0));
-  //  }
+    }
 
+    @Test
 
-}
+    public void createTransferDeadlockWithExecutorService() throws Exception {
+
+        int numberOfThreads = 2;
+        ExecutorService service = Executors.newFixedThreadPool(10);
+        CountDownLatch latch = new CountDownLatch(numberOfThreads);
+        Transfer transferA = new Transfer("Id-123", "Id-124", new BigDecimal(20));
+        Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
+        for (int i = 0; i < numberOfThreads; i++) {
+            service.submit(() -> {
+                this.transferService.createTransfer(transferA);
+                latch.countDown();
+            });
+
+            service.submit(() -> {
+                this.transferService.createTransfer(transferB);
+                latch.countDown();
+            });
+        }
+        latch.await();
+        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThan(new BigDecimal(0));
+    }
 
     @Test
     public void createTransfer_failsOnInvalidAmount() throws Exception {
