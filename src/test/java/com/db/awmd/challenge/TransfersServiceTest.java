@@ -67,16 +67,26 @@ public class TransfersServiceTest {
 
         CountDownLatch latch = new CountDownLatch(5);
         for (int i = 0; i < 5; ++i) {
-            Runnable runnableTask = () -> {
+            Runnable runnableTaskA = () -> {
                 try {
                     this.transferService.createTransfer(transferA);
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            };
+            new Thread(runnableTaskA, "Test ThreadA " + i).start();
+
+
+            Runnable runnableTaskB = () -> {
+                try {
                     this.transferService.createTransfer(transferB);
                     latch.await();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             };
-            new Thread(runnableTask, "Test Thread " + i).start();
+            new Thread(runnableTaskB, "Test ThreadB " + i).start();
         }
         // all threads are now waiting on the latch.
         latch.countDown(); // release the latch
