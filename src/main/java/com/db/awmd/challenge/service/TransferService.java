@@ -32,7 +32,7 @@ public class TransferService {
         if (transfer.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidAmountException("The amount must be positive!!");
         }
-        synchronized (transfer.getAccountFromId()) {
+        synchronized (transfer.getAccountFromId()+transfer.getAccountToId()) {
             Account accountFrom = accountsRepository.getAccount(transfer.getAccountFromId());
             Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
 
