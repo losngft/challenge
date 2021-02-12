@@ -15,6 +15,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -63,7 +65,7 @@ public class TransfersServiceTest {
         Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
 
 
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch = new CountDownLatch(5);
         for (int i = 0; i < 5; ++i) {
             Runnable runnableTask = () -> {
                 try {
@@ -79,10 +81,27 @@ public class TransfersServiceTest {
         // all threads are now waiting on the latch.
         latch.countDown(); // release the latch
         // all threads are now running the test method at the same time.
-        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThan(new BigDecimal(0));
-        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThan(new BigDecimal(1000));
+        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThanOrEqualTo(new BigDecimal(0));
+        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThanOrEqualTo(new BigDecimal(1000));
 
-    }
+//        int numberOfThreads = 2;
+//        ExecutorService service = Executors.newFixedThreadPool(10);
+//        CountDownLatch latch = new CountDownLatch(numberOfThreads);
+//        Transfer transferA = new Transfer("Id-123", "Id-124", new BigDecimal(20));
+//        Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
+//        for (int i = 0; i < numberOfThreads; i++) {
+//            service.submit(() -> {
+//                    this.transferService.createTransfer(transferA);
+//                    this.transferService.createTransfer(transferB);
+//                latch.countDown();
+//            });
+//        }
+//        latch.await();
+//        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThan(new BigDecimal(0));
+  //  }
+
+
+}
 
     @Test
     public void createTransfer_failsOnInvalidAmount() throws Exception {
