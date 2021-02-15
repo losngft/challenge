@@ -11,18 +11,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -62,63 +56,6 @@ public class TransfersServiceTest {
         assertThat(this.accountsService.getAccount("Id-124").getBalance()).isEqualTo(new BigDecimal(1000));
     }
 
-    @Test
-    public void createTransferDeadlock() throws Exception {
-        Transfer transferA = new Transfer("Id-123", "Id-124", new BigDecimal(20));
-        Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
-
-
-        CountDownLatch latch = new CountDownLatch(5);
-        for (int i = 0; i < 5; ++i) {
-            Runnable runnableTaskA = () -> {
-                try {
-                    this.transferService.createTransfer(transferA);
-                    latch.await();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            };
-            new Thread(runnableTaskA, "Test ThreadA " + i).start();
-
-
-            Runnable runnableTaskB = () -> {
-                try {
-                    this.transferService.createTransfer(transferB);
-                    latch.await();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            };
-            new Thread(runnableTaskB, "Test ThreadB " + i).start();
-        }
-        // all threads are now waiting on the latch.
-        latch.countDown(); // release the latch
-        // all threads are now running the test method at the same time.
-        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThanOrEqualTo(new BigDecimal(0));
-        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThanOrEqualTo(new BigDecimal(1000));
-
-    }
-
-    @Test
-
-    public void createTransferDeadlockWithExecutorService() throws Exception {
-
-        int numberOfThreads = 2;
-        ExecutorService service = Executors.newFixedThreadPool(10);
-        CountDownLatch latch = new CountDownLatch(numberOfThreads);
-        Transfer transferA = new Transfer("Id-123", "Id-124", new BigDecimal(20));
-        Transfer transferB = new Transfer("Id-124", "Id-123", new BigDecimal(15));
-        for (int i = 0; i < numberOfThreads; i++) {
-            service.submit(() -> {
-                this.transferService.createTransfer(transferA);
-                this.transferService.createTransfer(transferB);
-                latch.countDown();
-            });
-        }
-        latch.await();
-        assertThat(this.accountsService.getAccount("Id-124").getBalance()).isGreaterThanOrEqualTo(new BigDecimal(0));
-        assertThat(this.accountsService.getAccount("Id-123").getBalance()).isLessThanOrEqualTo(new BigDecimal(1000));
-    }
 
     @Test
     public void createTransfer_failsOnInvalidAmount() throws Exception {
@@ -145,37 +82,6 @@ public class TransfersServiceTest {
         } catch (NegativeBalanceException ex) {
             assertThat(ex.getMessage()).isEqualTo("Account id " + transfer.getAccountFromId() + " must not end up with negative balance!");
         }
-
-    }
-
-
-    @Test
-    public void testDeadlockHandlingMultithread() throws Exception {
-        String accountId1 = "Id-1235";
-        Account account1 = new Account(accountId1, new BigDecimal("100"));
-        this.accountsService.createAccount(account1);
-        String accountId2 = "Id-1234";
-        Account account2 = new Account(accountId2, new BigDecimal("20"));
-        this.accountsService.createAccount(account2);
-        int numberOfThreads = 2;
-        ExecutorService service = Executors.newFixedThreadPool(100);
-        CountDownLatch latch = new CountDownLatch(numberOfThreads);
-        Transfer transferA = new Transfer("Id-1235", "Id-1234", new BigDecimal(30));
-        Transfer transferB = new Transfer("Id-1234", "Id-1235", new BigDecimal(10));
-        service.submit(() -> {
-                this.transferService.createTransfer(transferA);
-            latch.countDown();
-        });
-        service.submit(() -> {
-            this.transferService.createTransfer(transferB);
-            latch.countDown();
-        });
-        latch.await();
-
-        Account accountFrom = accountsService.getAccount("Id-1235");
-        Account accountTo = accountsService.getAccount("Id-1234");
-        assertThat(accountFrom.getBalance()).isEqualByComparingTo("80");
-        assertThat(accountTo.getBalance()).isEqualByComparingTo("40");
 
     }
 
