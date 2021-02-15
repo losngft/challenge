@@ -32,16 +32,13 @@ public class TransferService {
         if (transfer.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidAmountException("The amount must be positive!!");
         }
-        synchronized (transfer.getAccountFromId()+transfer.getAccountToId()) {
+
+        synchronized (transfer.getAccountFromId()) {
+
             Account accountFrom = accountsRepository.getAccount(transfer.getAccountFromId());
-            Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
 
             if (accountFrom == null) {
                 throw new NonexistentAccountException("The account with Id: " + transfer.getAccountFromId() + " does not exist!!");
-            }
-
-            if (accountTo == null) {
-                throw new NonexistentAccountException("The account with Id: " + transfer.getAccountToId() + " does not exist!!");
             }
 
             BigDecimal balanceFrom = accountFrom.getBalance().subtract(transfer.getAmount());
@@ -49,11 +46,24 @@ public class TransferService {
                 throw new NegativeBalanceException(
                         "Account id " + transfer.getAccountFromId() + " must not end up with negative balance!");
             }
-
             accountFrom.setBalance(balanceFrom);
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        synchronized (transfer.getAccountToId()) {
+            Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
+            if (accountTo == null) {
+                throw new NonexistentAccountException("The account with Id: " + transfer.getAccountToId() + " does not exist!!");
+            }
             BigDecimal balanceTo = accountTo.getBalance().add(transfer.getAmount());
             accountTo.setBalance(balanceTo);
         }
+
         this.notificationService.notifyAboutTransfer(accountsService.getAccount(transfer.getAccountFromId()), "The amount of: " + transfer.getAmount() + " from your account was transferred to: " + transfer.getAccountToId());
         this.notificationService.notifyAboutTransfer(accountsService.getAccount(transfer.getAccountToId()), "The amount of: " + transfer.getAmount() + " was transferred to your account from: " + transfer.getAccountFromId());
     }
