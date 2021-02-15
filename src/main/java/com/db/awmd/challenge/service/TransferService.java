@@ -33,7 +33,17 @@ public class TransferService {
             throw new InvalidAmountException("The amount must be positive!!");
         }
 
-        synchronized (transfer.getAccountFromId()) {
+        String firstAccount="";
+        String secondAccount="";
+        if (transfer.getAccountFromId().compareTo(transfer.getAccountToId()) <= 0 ){
+            firstAccount = transfer.getAccountFromId();
+            secondAccount = transfer.getAccountToId();
+        }else{
+            firstAccount = transfer.getAccountToId();
+            secondAccount = transfer.getAccountFromId();
+        }
+
+        synchronized (firstAccount) {
 
             Account accountFrom = accountsRepository.getAccount(transfer.getAccountFromId());
 
@@ -55,7 +65,7 @@ public class TransferService {
 
         }
 
-        synchronized (transfer.getAccountToId()) {
+        synchronized (secondAccount) {
             Account accountTo = accountsRepository.getAccount(transfer.getAccountToId());
             if (accountTo == null) {
                 throw new NonexistentAccountException("The account with Id: " + transfer.getAccountToId() + " does not exist!!");
